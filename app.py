@@ -67,6 +67,20 @@ def get_users():
     return jsonify(user_list)
 
 
+# Endpoint pour supprimer un utilisateur de la liste des utilisateurs
+@app.route('/users/', methods=['DELETE'])
+def delete_user():
+    username = request.form.get('username')
+    users = User.query.filter_by(username=username)
+    if username:
+        for username in users:
+            db.session.delete(username)
+            db.session.commit()
+        return jsonify({'message': 'Utilisateur supprimé avec succès'}), 201
+    else:
+        return jsonify({'message': 'Donnée JSON incorrectes'}), 400
+
+
 # Endpoint pour créer un nouvel ingrédient
 @app.route('/ingredients/', methods=['POST'])
 def create_ingredient():
@@ -86,6 +100,20 @@ def get_ingredients():
     ingredients = Ingredient.query.all()
     ingredient_list = [{'id': ingredient.id, 'name': ingredient.name} for ingredient in ingredients]
     return jsonify(ingredient_list)
+
+
+# Endpoint pour supprimer un ingrédient de la liste d'ingrédient
+@app.route('/ingredients/', methods=['DELETE'])
+def delete_user():
+    name = request.form.get('name')
+    ingredients = Ingredient.query.filter_by(name=name)
+    if name:
+        for name in ingredients:
+            db.session.delete(name)
+            db.session.commit()
+        return jsonify({'message': 'Ingrédient supprimé avec succès'}), 201
+    else:
+        return jsonify({'message': 'Donnée JSON incorrectes'}), 400
 
 
 # Endpoint pour créer une nouvelle recette
@@ -109,6 +137,20 @@ def get_recette():
     return jsonify(recette_list)
 
 
+# Endpoint pour supprimer une recette de la liste de recette
+@app.route('/recette/', methods=['DELETE'])
+def delete_user():
+    name = request.form.get('name')
+    recettes = Recette.query.filter_by(name=name)
+    if name:
+        for name in recettes:
+            db.session.delete(name)
+            db.session.commit()
+        return jsonify({'message': 'Recette supprimé avec succès'}), 201
+    else:
+        return jsonify({'message': 'Donnée JSON incorrectes'}), 400
+
+
 # Endpoint pour créer un nouveau menu
 @app.route('/menu/', methods=['POST'])
 def create_menu():
@@ -128,6 +170,21 @@ def get_menu():
     menu = Menu.query.all()
     menu_list = [{'id': menu.id, 'name': menu.name} for menu in menu]
     return jsonify(menu_list)
+
+
+# Endpoint pour supprimer un menu de la liste des menus
+@app.route('/menu/', methods=['DELETE'])
+def delete_user():
+    name = request.form.get('name')
+    menus = Menu.query.filter_by(name=name)
+    if name:
+        for name in menus:
+            db.session.delete(name)
+            db.session.commit()
+        return jsonify({'message': 'Menu supprimé avec succès'}), 201
+    else:
+        return jsonify({'message': 'Donnée JSON incorrectes'}), 400
+
 
 
 @app.route('/')
