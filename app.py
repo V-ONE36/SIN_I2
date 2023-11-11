@@ -3,66 +3,124 @@ from flask import Flask, request, jsonify, json
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+# Crée une instance de l'application Flask.
 
 # Configuration de la base de données (SQLite pour cet exemple)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+# Configure l'URI de la base de données. Dans cet exemple, SQLite est utilisé avec un fichier appelé "database.db".
+# Cette configuration spécifie comment se connecter à la base de données.
 db = SQLAlchemy(app)
+# Crée une instance de SQLAlchemy, qui est une extension Flask pour la gestion des bases de données.
+# L'instance de la base de données est associée à l'application Flask créée précédemment.
 
 
 # Modèle de données pour un utilisateur
 class User(db.Model):
+    # Définition de la classe User qui représente la table des utilisateurs dans la base de données.
     id = db.Column(db.Integer, primary_key=True)
+    # Colonne "id" de type entier (Integer) et clé primaire (primary_key=True).
+    # Chaque utilisateur aura un identifiant unique.
     name = db.Column(db.String(80), unique=True, nullable=False)
+    # Colonne "name" de type chaîne de caractères (String) d'une longueur maximale de 80 caractères.
+    # La contrainte unique=True garantit que chaque nom d'utilisateur est unique dans la base de données.
+    # La contrainte nullable=False indique que ce champ ne peut pas être vide.
 
 
 # Modèle de données pour un ingrédient
 class Ingredient(db.Model):
+    # Définit un modèle de données pour un ingrédient dans la base de données.
     id = db.Column(db.Integer, primary_key=True)
+    # 'id': Champ entier servant de clé primaire pour chaque ingrédient.
     name = db.Column(db.String(100), unique=True, nullable=False)
+    # 'name': Champ de texte pour stocker le nom de l'ingrédient. Il doit être unique et non nullable.
     recettes = db.relationship('Recette', secondary='recette_ingredient', back_populates='ingredients')
+    # 'recettes': Relation many-to-many avec le modèle 'Recette'. Cela est défini par la table
+    # de liaison 'recette_ingredient'.
+    # 'back_populates' assure que la relation est bidirectionnelle, permettant la navigation depuis 'Recette'.
 
 
 # Modèle de données pour une recette
 class Recette(db.Model):
+    # Définit un modèle de données pour une recette dans la base de données.
     id = db.Column(db.Integer, primary_key=True)
+    # 'id': Champ entier servant de clé primaire pour chaque recette.
     name = db.Column(db.String(100), nullable=False)
-    type = db.Column(db.String(20), nullable=False)  # Entrée, Plat, Dessert
+    # 'name': Champ de texte pour stocker le nom de la recette. Il est non nullable.
+    type = db.Column(db.String(20), nullable=False)
+    # 'type': Champ de texte pour spécifier le type de recette (Entrée, Plat, Dessert). Il est non nullable.
     ingredients = db.relationship('Ingredient', secondary='recette_ingredient', back_populates='recettes')
+    # 'ingredients': Relation many-to-many avec le modèle 'Ingredient' à travers la table 'recette_ingredient'.
+    # 'back_populates' assure que la relation est bidirectionnelle, permettant la navigation depuis 'Ingredient'.
 
 
 # Modèle de données pour un menu
 class Menu(db.Model):
+    # Définit un modèle de données pour un menu dans la base de données.
     id = db.Column(db.Integer, primary_key=True)
+    # 'id': Champ entier servant de clé primaire pour chaque menu.
     name = db.Column(db.String(100), nullable=False)
+    # 'name': Champ de texte pour stocker le nom du menu. Il est non nullable.
     entry_id = db.Column(db.Integer, db.ForeignKey('recette.id'), nullable=False)
     main_dish_id = db.Column(db.Integer, db.ForeignKey('recette.id'), nullable=False)
     dessert_id = db.Column(db.Integer, db.ForeignKey('recette.id'), nullable=False)
+    # - 'entry_id', 'main_dish_id', 'dessert_id': Champs entiers représentant les clés étrangères vers les recettes
+    # correspondantes (entrée, plat principal, dessert).
+    # Remarque : Les clés étrangères sont liées aux clés primaires de la table 'Recette'.
 
 
 # Modèle de données pour la relation many-to-many entre Recette et Ingredient
 recette_ingredient = db.Table('recette_ingredient',
+                              # Définit une table de liaison many-to-many entre les tables 'Recette' et 'Ingredient'.
                               db.Column('recette_id', db.Integer, db.ForeignKey('recette.id'), primary_key=True),
+                              # 'recette_id': Champ entier représentant la clé étrangère vers la table 'Recette'.
                               db.Column('ingredient_id', db.Integer, db.ForeignKey('ingredient.id'), primary_key=True),
+                              # 'ingredient_id': Champ entier représentant la clé étrangère vers la table 'Ingredient'.
                               db.Column('quantity', db.Float, nullable=False))
+# 'quantity': Champ float représentant la quantité de l'ingrédient dans la recette.
+# 'primary_key=True': Indique que la combinaison des deux clés étrangères est la clé primaire de cette table de liaison.
+# Remarque : Cette table est utilisée pour représenter la relation many-to-many entre les recettes et les ingrédients.
+# Elle contient des informations supplémentaires comme la quantité d'un ingrédient dans une recette.
 
 
 # Modèle pour la table Step
 class Step(db.Model):
+    # Modèle de données pour représenter les étapes d'une recette.
     id = db.Column(db.Integer, primary_key=True)
+    # 'id': Champ entier servant de clé primaire pour la table des étapes.
     description = db.Column(db.Text, nullable=False)
+    # 'description': Champ texte représentant la description d'une étape de recette.
     recette_name = db.Column(db.String(100), db.ForeignKey('recette.name'), nullable=False)
+    # 'recette_name': Champ de texte servant de clé étrangère vers le nom d'une recette.
+# Remarque : Le champ 'recette_name' est lié à la colonne 'name' dans la table 'Recette'.
+# Cela établit une relation entre les étapes et les recettes, où chaque étape est associée à une recette spécifique.
 
 
 # Modèle pour la table RecetteFavorite
 class RecetteFavorite(db.Model):
+    # Modèle de données pour représenter les recettes favorites d'un utilisateur.
     id = db.Column(db.Integer, primary_key=True)
+    # 'id': Champ entier servant de clé primaire pour la table des recettes favorites.
     user_name = db.Column(db.String(80), db.ForeignKey('user.name'), nullable=False)
+    # 'user_name': Champ de texte servant de clé étrangère vers le nom d'un utilisateur.
     recette_name = db.Column(db.String(100), db.ForeignKey('recette.name'), nullable=False)
+    # 'recette_name': Champ de texte servant de clé étrangère vers le nom d'une recette.
+# Remarque : Les champs 'user_name' et 'recette_name' sont liés aux colonnes 'name' dans les tables 'User' et 'Recette'
+# respectivement.
+# Cela établit une relation où chaque entrée dans la table des recettes favorites est associée à un utilisateur et
+# une recette spécifiques.
 
 
-# Créez les tables dans la base de données
+# Cette portion de code crée toutes les tables définies dans les modèles de données
+# (User, Ingredient, Recette, Menu, Step, RecetteFavorite)
+# dans la base de données. Cela est réalisé en utilisant la méthode create_all()
+# du SQLAlchemy instance (db) associée à l'application Flask.
 with app.app_context():
+    # 'with app.app_context()': Crée un contexte d'application Flask, nécessaire pour effectuer
+    # des opérations liées à l'application, comme la création de tables dans la base de données.
     db.create_all()
+    # 'db.create_all()': Cette méthode analyse tous les modèles de données (représentés par des classes) définis dans le
+    # code et crée les tables correspondantes dans la base de données. Si les tables existent déjà,
+    # cette opération n'a aucun effet.
 
 
 # Endpoint pour créer un nouvel utilisateur
