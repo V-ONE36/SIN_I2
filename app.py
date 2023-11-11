@@ -12,7 +12,7 @@ db = SQLAlchemy(app)
 # Modèle de données pour un utilisateur
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
+    name = db.Column(db.String(80), unique=True, nullable=False)
 
 
 # Modèle de données pour un ingrédient
@@ -26,16 +26,16 @@ class Recette(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(20), nullable=False)  # Entrée, Plat, Dessert
-    ingredient = db.relationship('Ingredient', secondary='recette_ingredient', back_populates='recette')
+    ingredient = db.relationship('Ingredient', secondary='recette_ingredient', back_populates='recettes')
 
 
 # Modèle de données pour un menu
 class Menu(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    entry_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
-    main_dish_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
-    dessert_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    entry_id = db.Column(db.Integer, db.ForeignKey('recette.id'), nullable=False)
+    main_dish_id = db.Column(db.Integer, db.ForeignKey('recette.id'), nullable=False)
+    dessert_id = db.Column(db.Integer, db.ForeignKey('recette.id'), nullable=False)
 
 
 # Modèle de données pour la relation many-to-many entre Recette et Ingredient
@@ -69,19 +69,19 @@ with app.app_context():
 def create_user():
     username = request.form.get('username')
     if username:
-        new_user = User(username=username)
+        new_user = User(name=username)
         db.session.add(new_user)
         db.session.commit()
         return jsonify({'message': 'Utilisateur créé avec succès'}), 201
     else:
-        return jsonify({'message': 'Données JSON incorrectes'}), 400
+        return jsonify({'message': 'Données incorrectes'}), 400
 
 
 # Endpoint pour récupérer la liste de tous les utilisateurs
 @app.route('/users/', methods=['GET'])
 def get_users():
     users = User.query.all()
-    user_list = [{'id': user.id, 'username': user.username, 'password': user.password} for user in users]
+    user_list = [{'id': user.id, 'username': user.name} for user in users]
     return jsonify(user_list)
 
 
@@ -89,14 +89,16 @@ def get_users():
 @app.route('/users/', methods=['DELETE'])
 def delete_user():
     username = request.form.get('username')
-    users = User.query.filter_by(username=username)
     if username:
-        for username in users:
-            db.session.delete(username)
+        user = User.query.filter_by(name=username).first()
+        if user:
+            db.session.delete(user)
             db.session.commit()
-        return jsonify({'message': 'Utilisateur supprimé avec succès'}), 201
+            return jsonify({'message': 'Utilisateur supprimé avec succès'}), 201
+        else:
+            return jsonify({'message': 'Utilisateur non trouvé'}), 404
     else:
-        return jsonify({'message': 'Donnée JSON incorrectes'}), 400
+        return jsonify({'message': 'Données incorrectes'}), 400
 
 
 # Endpoint pour créer un nouvel ingrédient
@@ -109,7 +111,7 @@ def create_ingredient():
         db.session.commit()
         return jsonify({'message': 'Ingrédient créé avec succès'}), 201
     else:
-        return jsonify({'message': 'Données JSON incorrectes'}), 400
+        return jsonify({'message': 'Données incorrectes'}), 400
 
 
 # Endpoint pour récupérer la liste de tous les ingrédients
@@ -122,20 +124,22 @@ def get_all_ingredients():
 
 # Endpoint pour supprimer un ingrédient de la liste d'ingrédient
 @app.route('/ingredients/', methods=['DELETE'])
-def delete_user():
+def delete_ingredient():
     name = request.form.get('name')
-    ingredients = Ingredient.query.filter_by(name=name)
     if name:
-        for name in ingredients:
-            db.session.delete(name)
+        ingredient = Ingredient.query.filter_by(name=name).first()
+        if ingredient:
+            db.session.delete(ingredient)
             db.session.commit()
-        return jsonify({'message': 'Ingrédient supprimé avec succès'}), 201
+            return jsonify({'message': 'Ingrédient supprimé avec succès'}), 201
+        else:
+            return jsonify({'message': 'Ingrédient non trouvé'}), 404
     else:
-        return jsonify({'message': 'Donnée JSON incorrectes'}), 400
+        return jsonify({'message': 'Données incorrectes'}), 400
 
 
 # Endpoint pour créer une nouvelle recette
-@app.route('/recette/', methods=['POST'])
+@app.route('/recettes/', methods=['POST'])
 def create_recette():
     name = request.form.get('name')
     type = request.form.get('type')
@@ -166,23 +170,23 @@ def create_recette():
         # Ajoutez la recette à la base de données
         db.session.add(new_recette)
         db.session.commit()
-        return jsonify({'message': 'Recette créée avec succés'}), 201
+        return jsonify({'message': 'Recette créée avec succès'}), 201
     else:
-        return jsonify({'message': 'Données JSON incorrectes'}), 400
+        return jsonify({'message': 'Données incorrectes'}), 400
 
 
 # Endpoint pour récupérer la liste de toutes les recettes
-@app.route('/recette/', methods=['GET'])
+@app.route('/recettes/', methods=['GET'])
 def get_all_recette():
-    recette = Recette.query.all()
-    recette_list = [{'id': recette.id, 'type': recette.type, 'name': recette.name} for recette in recette]
+    recettes = Recette.query.all()
+    recette_list = [{'id': recette.id, 'type': recette.type, 'name': recette.name} for recette in recettes]
     return jsonify(recette_list)
 
 
 # Endpoint pour lister les étapes de conception d'une recette
-@app.route('/recette/<str:recette_name>/steps/', methods=['GET'])
+@app.route('/recettes/<string:recette_name>/steps/', methods=['GET'])
 def get_recette_steps(recette_name):
-    recette = Recette.query.get(recette_name)
+    recette = Recette.query.filter_by(name=recette_name).first()
     if recette:
         steps = Step.query.filter_by(recette_name=recette_name).all()
         steps_list = [{'step_id': step.id, 'description': step.description} for step in steps]
@@ -192,9 +196,9 @@ def get_recette_steps(recette_name):
 
 
 # Endpoint pour marquer/démarquer des recettes comme étant ses préférées
-@app.route('/users/<str:user_name>/recette_favorite/', methods=['POST', 'DELETE'])
+@app.route('/users/<string:user_name>/recette_favorite/', methods=['POST', 'DELETE'])
 def manage_recette_favorite(user_name):
-    user = User.query.get(user_name)
+    user = User.query.filter_by(name=user_name).first()
     if not user:
         return jsonify({'message': 'Utilisateur inconnu'}), 404
 
@@ -203,7 +207,7 @@ def manage_recette_favorite(user_name):
     if not recette_name:
         return jsonify({'message': 'Nom de la recette requis'}), 400
 
-    recette = Recette.query.get(recette_name)
+    recette = Recette.query.filter_by(name=recette_name).first()
     if not recette:
         return jsonify({'message': 'Recette inexistante'}), 404
 
@@ -212,28 +216,28 @@ def manage_recette_favorite(user_name):
         recette_favorite = RecetteFavorite(user_name=user.name, recette_name=recette.name)
         db.session.add(recette_favorite)
         db.session.commit()
-        return jsonify({'message': 'Recette ajoutée aux favories avec succès'}), 201
+        return jsonify({'message': 'Recette ajoutée aux favoris avec succès'}), 201
     elif request.method == 'DELETE':
         # Retirer la recette de la liste des recettes préférées de l'utilisateur
         recette_favorite = RecetteFavorite.query.filter_by(user_name=user.name, recette_name=recette.name).first()
         if recette_favorite:
             db.session.delete(recette_favorite)
             db.session.commit()
-            return jsonify({'message': 'Recette supprimée des favories avec succès'}), 200
+            return jsonify({'message': 'Recette supprimée des favoris avec succès'}), 200
         else:
-            return jsonify({'message': 'Recette inexistante dans favories'}), 404
+            return jsonify({'message': 'Recette inexistante dans les favoris'}), 404
 
 
 # Endpoint pour dresser la liste de ses recettes préférées
-@app.route('/users/<str:user_name>/recette_favorite/', methods=['GET'])
+@app.route('/users/<string:user_name>/recette_favorite/', methods=['GET'])
 def get_recette_favorite(user_name):
-    user = User.query.get(user_name)
+    user = User.query.filter_by(name=user_name).first()
     if not user:
         return jsonify({'message': 'Utilisateur inconnu'}), 404
 
     recette_favorite = (
         db.session.query(Recette)
-        .join(RecetteFavorite, Recette.name == Recette.recette_name)
+        .join(RecetteFavorite, Recette.name == RecetteFavorite.recette_name)
         .filter(RecetteFavorite.user_name == user.name)
         .all())
 
@@ -246,21 +250,23 @@ def get_recette_favorite(user_name):
 
 
 # Endpoint pour supprimer une recette de la liste de recette
-@app.route('/recette/', methods=['DELETE'])
-def delete_user():
+@app.route('/recettes/', methods=['DELETE'])
+def delete_recette():
     name = request.form.get('name')
-    recette = Recette.query.filter_by(name=name)
     if name:
-        for name in recette:
-            db.session.delete(name)
+        recette = Recette.query.filter_by(name=name).first()
+        if recette:
+            db.session.delete(recette)
             db.session.commit()
-        return jsonify({'message': 'Recette supprimé avec succès'}), 201
+            return jsonify({'message': 'Recette supprimée avec succès'}), 201
+        else:
+            return jsonify({'message': 'Recette non trouvée'}), 404
     else:
-        return jsonify({'message': 'Donnée JSON incorrectes'}), 400
+        return jsonify({'message': 'Données incorrectes'}), 400
 
 
 # Endpoint pour créer un nouveau menu
-@app.route('/menu/', methods=['POST'])
+@app.route('/menus/', methods=['POST'])
 def create_menu():
     name = request.form.get('name')
     entry = request.form.get('entry')
@@ -270,31 +276,33 @@ def create_menu():
         new_menu = Menu(name=name, entry=entry, main_dish=main_dish, dessert=dessert)
         db.session.add(new_menu)
         db.session.commit()
-        return jsonify({'message': 'Menu créé avec succés'}), 201
+        return jsonify({'message': 'Menu créé avec succès'}), 201
     else:
-        return jsonify({'message': 'Données JSON incorrectes'}), 400
+        return jsonify({'message': 'Données incorrectes'}), 400
 
 
 # Endpoint pour récupérer la liste de tous les menus
-@app.route('/menu/', methods=['GET'])
+@app.route('/menus/', methods=['GET'])
 def get_menu():
-    menu = Menu.query.all()
-    menu_list = [{'id': menu.id, 'name': menu.name} for menu in menu]
+    menus = Menu.query.all()
+    menu_list = [{'id': menu.id, 'name': menu.name} for menu in menus]
     return jsonify(menu_list)
 
 
 # Endpoint pour supprimer un menu de la liste des menus
-@app.route('/menu/', methods=['DELETE'])
-def delete_user():
+@app.route('/menus/', methods=['DELETE'])
+def delete_menu():
     name = request.form.get('name')
-    menus = Menu.query.filter_by(name=name)
     if name:
-        for name in menus:
-            db.session.delete(name)
+        menu = Menu.query.filter_by(name=name).first()
+        if menu:
+            db.session.delete(menu)
             db.session.commit()
-        return jsonify({'message': 'Menu supprimé avec succès'}), 201
+            return jsonify({'message': 'Menu supprimé avec succès'}), 201
+        else:
+            return jsonify({'message': 'Menu non trouvé'}), 404
     else:
-        return jsonify({'message': 'Donnée JSON incorrectes'}), 400
+        return jsonify({'message': 'Données incorrectes'}), 400
 
 
 if __name__ == "__main__":
