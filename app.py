@@ -19,6 +19,7 @@ class User(db.Model):
 class Ingredient(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
+    recettes = db.relationship('Recette', secondary='recette_ingredient', back_populates='ingredients')
 
 
 # Modèle de données pour une recette
@@ -26,7 +27,7 @@ class Recette(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(20), nullable=False)  # Entrée, Plat, Dessert
-    ingredient = db.relationship('Ingredient', secondary='recette_ingredient', back_populates='recettes')
+    ingredients = db.relationship('Ingredient', secondary='recette_ingredient', back_populates='recettes')
 
 
 # Modèle de données pour un menu
