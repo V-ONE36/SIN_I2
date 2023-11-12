@@ -127,67 +127,102 @@ with app.app_context():
 @app.route('/users/', methods=['POST'])
 def create_user():
     username = request.form.get('username')
+    # Récupère le nom d'utilisateur à partir des données du formulaire dans la requête
     if username:
+        # Vérifie si le nom d'utilisateur est fourni
         new_user = User(name=username)
+        # Crée une nouvelle instance de la classe User avec le nom d'utilisateur fourni
         db.session.add(new_user)
+        # Ajoute le nouvel utilisateur à la session de la base de données
         db.session.commit()
+        # Effectue la validation de la session en ajoutant l'utilisateur à la base de données
         return jsonify({'message': 'Utilisateur créé avec succès'}), 201
+        # Retourne une réponse JSON indiquant que l'utilisateur a été créé avec succès,
+        # avec le code de statut HTTP 201 (Created)
     else:
         return jsonify({'message': 'Données incorrectes'}), 400
+    # Retourne une réponse JSON indiquant que les données fournies sont incorrectes,
+    # avec le code de statut HTTP 400 (Bad Request)
 
 
 # Endpoint pour récupérer la liste de tous les utilisateurs
 @app.route('/users/', methods=['GET'])
 def get_users():
     users = User.query.all()
+    # Récupère tous les utilisateurs de la base de données
     user_list = [{'id': user.id, 'username': user.name} for user in users]
+    # Crée une liste de dictionnaires contenant l'ID et le nom d'utilisateur de chaque utilisateur
     return jsonify(user_list)
+    # Retourne la liste des utilisateurs sous forme de réponse JSON
 
 
 # Endpoint pour supprimer un utilisateur de la liste des utilisateurs
 @app.route('/users/', methods=['DELETE'])
 def delete_user():
     username = request.form.get('username')
+    # Récupère le nom d'utilisateur à partir des données du formulaire de la requête DELETE
     if username:
+        # Vérifie si le nom d'utilisateur est fourni
         user = User.query.filter_by(name=username).first()
+        # Recherche l'utilisateur dans la base de données par le nom d'utilisateur
         if user:
+            # Si l'utilisateur est trouvé, le supprime de la base de données
             db.session.delete(user)
             db.session.commit()
             return jsonify({'message': 'Utilisateur supprimé avec succès'}), 201
         else:
             return jsonify({'message': 'Utilisateur non trouvé'}), 404
+            # Si l'utilisateur n'est pas trouvé, retourne une réponse indiquant
+            # que l'utilisateur n'a pas été trouvé (code 404)
     else:
         return jsonify({'message': 'Données incorrectes'}), 400
+        # Si le nom d'utilisateur n'est pas fourni dans la requête,
+        # retourne une réponse indiquant des données incorrectes (code 400)
 
 
 # Endpoint pour créer un nouvel ingrédient
 @app.route('/ingredients/', methods=['POST'])
 def create_ingredient():
     name = request.form.get('name')
+    # Récupère le nom de l'ingrédient à partir des données du formulaire de la requête POST
     if name:
+        # Vérifie si le nom de l'ingrédient est fourni
         new_ingredient = Ingredient(name=name)
+        # Crée un nouvel objet Ingredient avec le nom fourni
         db.session.add(new_ingredient)
+        # Ajoute le nouvel ingrédient à la session de base de données
         db.session.commit()
+        # Valide les changements en effectuant un commit dans la base de données
         return jsonify({'message': 'Ingrédient créé avec succès'}), 201
+        # Retourne une réponse JSON indiquant que l'ingrédient a été créé avec succès avec un code 201
     else:
         return jsonify({'message': 'Données incorrectes'}), 400
+        # Si le nom de l'ingrédient n'est pas fourni dans la requête,
+        # retourne une réponse indiquant des données incorrectes (code 400)
 
 
 # Endpoint pour récupérer la liste de tous les ingrédients
 @app.route('/ingredients/', methods=['GET'])
 def get_all_ingredients():
     ingredients = Ingredient.query.all()
+    # Récupère tous les objets Ingredient de la base de données
     ingredient_list = [{'id': ingredient.id, 'name': ingredient.name} for ingredient in ingredients]
+    # Crée une liste de dictionnaires contenant l'id et le nom de chaque ingrédient
     return jsonify(ingredient_list)
+    # Retourne une réponse JSON contenant la liste des ingrédients
 
 
 # Endpoint pour supprimer un ingrédient de la liste d'ingrédient
 @app.route('/ingredients/', methods=['DELETE'])
 def delete_ingredient():
     name = request.form.get('name')
+    # Récupère le nom de l'ingrédient à supprimer depuis la requête
     if name:
+        # Vérifie si le nom de l'ingrédient est fourni
         ingredient = Ingredient.query.filter_by(name=name).first()
+        # Recherche l'objet Ingredient dans la base de données avec le nom spécifié
         if ingredient:
+            # Supprime l'objet Ingredient de la base de données
             db.session.delete(ingredient)
             db.session.commit()
             return jsonify({'message': 'Ingrédient supprimé avec succès'}), 201
