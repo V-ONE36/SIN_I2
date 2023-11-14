@@ -281,11 +281,16 @@ def get_all_recette():
 @app.route('/recettes/<string:recette_name>/steps/', methods=['GET'])
 def get_recette_steps(recette_name):
     recette = Recette.query.filter_by(name=recette_name).first()
+    # Recherche la recette dans la base de données avec le nom spécifié
     if recette:
         steps = Step.query.filter_by(recette_name=recette_name).all()
+        # Recherche toutes les étapes associées à la recette
         steps_list = [{'step_id': step.id, 'description': step.description} for step in steps]
-        return jsonify({'recette_name': recette.name, 'steps': steps_list})
+        # Crée une liste de dictionnaires représentant les étapes
+        return jsonify({'recette_name': recette.name, 'steps': steps_list}), 201
+        # Retourne une réponse JSON contenant le nom de la recette et la liste des étapes
     else:
+        # Retourne une réponse JSON indiquant que la recette n'a pas été trouvée
         return jsonify({'message': 'Recette inexistante'}), 404
 
 
@@ -293,15 +298,19 @@ def get_recette_steps(recette_name):
 @app.route('/users/<string:user_name>/recette_favorite/', methods=['POST', 'DELETE'])
 def manage_recette_favorite(user_name):
     user = User.query.filter_by(name=user_name).first()
+    # Recherche l'utilisateur dans la base de données avec le nom spécifié
     if not user:
         return jsonify({'message': 'Utilisateur inconnu'}), 404
+        # Retourne une réponse JSON indiquant que l'utilisateur n'a pas été trouvée
 
     recette_name = request.form.get('recette_name')
-
+    # Récupère le nom de la recette depuis la requête
+    
     if not recette_name:
         return jsonify({'message': 'Nom de la recette requis'}), 400
 
     recette = Recette.query.filter_by(name=recette_name).first()
+    # Recherche la recette dans la base de données avec le nom spécifié
     if not recette:
         return jsonify({'message': 'Recette inexistante'}), 404
 
@@ -326,37 +335,49 @@ def manage_recette_favorite(user_name):
 @app.route('/users/<string:user_name>/recette_favorite/', methods=['GET'])
 def get_recette_favorite(user_name):
     user = User.query.filter_by(name=user_name).first()
+    # Recherche l'utilisateur dans la base de données avec le nom spécifié
     if not user:
         return jsonify({'message': 'Utilisateur inconnu'}), 404
+        # Retourne une réponse JSON indiquant que l'utilisateur n'a pas été trouvé
 
     recette_favorite = (
         db.session.query(Recette)
         .join(RecetteFavorite, Recette.name == RecetteFavorite.recette_name)
         .filter(RecetteFavorite.user_name == user.name)
         .all())
+    # Recherche les recettes favorites de l'utilisateur en utilisant une jointure
 
     if recette_favorite:
         recette_favorite_list = [{'recette_id': recette.id, 'name': recette.name, 'type': recette.type}
                                  for recette in recette_favorite]
+        # Crée une liste de dictionnaires représentant les recettes favorites de l'utilisateur
         return jsonify({'user_name': user.name, 'recette_favorite': recette_favorite_list})
+        # Retourne une réponse JSON contenant le nom de l'utilisateur et la liste des recettes favorites
     else:
         return jsonify({'user_name': user.name, 'recette_favorite': []})
+        # Retourne une réponse JSON indiquant que l'utilisateur n'a pas de recettes favorites
 
 
 # Endpoint pour supprimer une recette de la liste de recette
 @app.route('/recettes/', methods=['DELETE'])
 def delete_recette():
     name = request.form.get('name')
+    # Récupère le nom de la recette à supprimer à partir des données du formulaire
     if name:
         recette = Recette.query.filter_by(name=name).first()
+        # Recherche la recette dans la base de données avec le nom spécifié
         if recette:
+            # Supprime la recette de la base de données
             db.session.delete(recette)
             db.session.commit()
             return jsonify({'message': 'Recette supprimée avec succès'}), 201
+            # Retourne une réponse JSON indiquant que la recette a été supprimée avec succès
         else:
             return jsonify({'message': 'Recette non trouvée'}), 404
+            # Retourne une réponse JSON indiquant que la recette n'a pas été trouvée
     else:
         return jsonify({'message': 'Données incorrectes'}), 400
+        # Retourne une réponse JSON indiquant que les données du formulaire sont incorrectes
 
 
 # Endpoint pour créer un nouveau menu
@@ -366,37 +387,53 @@ def create_menu():
     entry = request.form.get('entry')
     main_dish = request.form.get('main_dish')
     dessert = request.form.get('dessert')
+    # Récupère les données du formulaire pour créer un nouveau menu
     if name and entry and main_dish and dessert:
         new_menu = Menu(name=name, entry=entry, main_dish=main_dish, dessert=dessert)
+        # Crée un nouvel objet Menu avec les données du formulaire
         db.session.add(new_menu)
         db.session.commit()
+        # Ajoute le nouveau menu à la base de données
         return jsonify({'message': 'Menu créé avec succès'}), 201
+        # Retourne une réponse JSON indiquant que le menu a été créé avec succès
     else:
         return jsonify({'message': 'Données incorrectes'}), 400
+        # Retourne une réponse JSON indiquant que les données du formulaire sont incorrectes
 
 
 # Endpoint pour récupérer la liste de tous les menus
 @app.route('/menus/', methods=['GET'])
 def get_menu():
     menus = Menu.query.all()
+    # Récupère tous les menus de la base de données
     menu_list = [{'id': menu.id, 'name': menu.name} for menu in menus]
+    # Crée une liste de dictionnaires représentant chaque menu
     return jsonify(menu_list)
+    # Retourne une réponse JSON contenant la liste des menus
 
 
 # Endpoint pour supprimer un menu de la liste des menus
 @app.route('/menus/', methods=['DELETE'])
 def delete_menu():
     name = request.form.get('name')
+    # Récupère le nom du menu à partir des données de la requête
     if name:
+        # Vérifie si le nom du menu est fourni
         menu = Menu.query.filter_by(name=name).first()
+         # Recherche le menu par son nom dans la base de données
         if menu:
+            # Vérifie si le menu existe
             db.session.delete(menu)
             db.session.commit()
+            # Supprime le menu de la base de données
             return jsonify({'message': 'Menu supprimé avec succès'}), 201
+            # Retourne une réponse JSON indiquant que le menu a été supprimé avec succès
         else:
             return jsonify({'message': 'Menu non trouvé'}), 404
+            # Retourne une réponse JSON indiquant que le menu n'a pas été trouvé
     else:
         return jsonify({'message': 'Données incorrectes'}), 400
+        # Retourne une réponse JSON indiquant que les données fournies sont incorrectes
 
 
 if __name__ == "__main__":
