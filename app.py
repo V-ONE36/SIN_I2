@@ -277,6 +277,34 @@ def get_all_recette():
     return jsonify(recette_list)
 
 
+# Endpoint pour créer une nouvelle étape pour une recette
+@app.route('/recettes/<string:recette_name>/steps/', methods=['POST'])
+def create_recette_step(recette_name):
+    recette = Recette.query.filter_by(name=recette_name).first()
+    # Recherche la recette dans la base de données avec le nom spécifié
+
+    if recette:
+        description = request.form.get('description')
+        # Récupère la description de l'étape depuis la requête POST
+
+        if description:
+            new_step = Step(description=description, recette_name=recette_name)
+            # Crée une nouvelle étape associée à la recette spécifiée
+
+            db.session.add(new_step)
+            db.session.commit()
+            # Ajoute la nouvelle étape à la base de données
+
+            return jsonify({'message': 'Étape ajoutée avec succès'}), 201
+            # Retourne une réponse JSON indiquant que l'étape a été ajoutée avec succès
+        else:
+            return jsonify({'message': 'Description manquante'}), 400
+            # Retourne une réponse JSON indiquant que la description de l'étape est manquante
+    else:
+        return jsonify({'message': 'Recette inexistante'}), 404
+        # Retourne une réponse JSON indiquant que la recette n'a pas été trouvée
+
+
 # Endpoint pour lister les étapes de conception d'une recette
 @app.route('/recettes/<string:recette_name>/steps/', methods=['GET'])
 def get_recette_steps(recette_name):
