@@ -420,7 +420,7 @@ def delete_menu():
     if name:
         # Vérifie si le nom du menu est fourni
         menu = Menu.query.filter_by(name=name).first()
-         # Recherche le menu par son nom dans la base de données
+        # Recherche le menu par son nom dans la base de données
         if menu:
             # Vérifie si le menu existe
             db.session.delete(menu)
