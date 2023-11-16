@@ -75,7 +75,10 @@ recette_ingredient = db.Table('recette_ingredient',
                               # 'recette_id': Champ entier représentant la clé étrangère vers la table 'Recette'.
                               db.Column('ingredient_id', db.Integer, db.ForeignKey('ingredient.id'), primary_key=True),
                               # 'ingredient_id': Champ entier représentant la clé étrangère vers la table 'Ingredient'.
-                              db.Column('quantity', db.Float, nullable=False))
+                              db.Column('quantity', db.Float, nullable=False),
+                              db.relationship('Recette', back_populates='ingredients'),
+                              db.relationship('Ingredient', back_populates='recettes')
+                              )
 # 'quantity': Champ float représentant la quantité de l'ingrédient dans la recette.
 # 'primary_key=True': Indique que la combinaison des deux clés étrangères est la clé primaire de cette table de liaison.
 # Remarque : Cette table est utilisée pour représenter la relation many-to-many entre les recettes et les ingrédients.
@@ -258,8 +261,9 @@ def create_recette():
                 if not ingredient:
                     ingredient = Ingredient(name=ingredient_name)
                     db.session.add(ingredient)
+                    db.session.commit()
 
-                new_recette.ingredients.append(ingredient, {'quantity': quantity})
+                new_recette.ingredients.append({'ingredient': ingredient, 'quantity': quantity})
 
         # Ajoutez la recette à la base de données
         db.session.add(new_recette)
