@@ -17,23 +17,47 @@ db = SQLAlchemy(app)
 # Modèle de données pour un utilisateur
 class User(db.Model):
     # Définition de la classe User qui représente la table des utilisateurs dans la base de données.
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     # Colonne "id" de type entier (Integer) et clé primaire (primary_key=True).
     # Chaque utilisateur aura un identifiant unique.
     name = db.Column(db.String(80), unique=True, nullable=False)
     # Colonne "name" de type chaîne de caractères (String) d'une longueur maximale de 80 caractères.
+    favorites = db.relationship('RecetteFavorite', back_populates='user')
     # La contrainte unique=True garantit que chaque nom d'utilisateur est unique dans la base de données.
     # La contrainte nullable=False indique que ce champ ne peut pas être vide.
+
+
+class RecetteIngredient(db.Model):
+    __tablename__ = 'recette_ingredient'
+    # Définit une table de liaison many-to-many entre les tables 'Recette' et 'Ingredient'.
+    recette_id = db.Column(db.Integer, db.ForeignKey('recette.id'), primary_key=True)
+    # 'recette_id': Champ entier représentant la clé étrangère vers la table 'Recette'.
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), primary_key=True)
+    # 'ingredient_id': Champ entier représentant la clé étrangère vers la table 'Ingredient'.
+    quantity = db.Column(db.String(20), nullable=False)
+    # 'quantity': Champ float représentant la quantité de l'ingrédient dans la recette.
+
+    recette = db.relationship('Recette', back_populates='ingredients', foreign_keys=[recette_id],
+                              primaryjoin="RecetteIngredient.recette_id == Recette.id",
+                              remote_side="Recette.id")
+    ingredient = db.relationship('Ingredient', back_populates='used_in_recettes', foreign_keys=[ingredient_id])
+    # 'primary_key=True': Indique que la combinaison des deux clés étrangères
+    # est la clé primaire de cette table de liaison.
+    # Remarque : Cette table est utilisée pour représenter la relation many-to-many
+    # entre les recettes et les ingrédients.
+    # Elle contient des informations supplémentaires comme la quantité d'un ingrédient dans une recette.
 
 
 # Modèle de données pour un ingrédient
 class Ingredient(db.Model):
     # Définit un modèle de données pour un ingrédient dans la base de données.
+    __tablename__ = 'ingredient'
     id = db.Column(db.Integer, primary_key=True)
     # 'id': Champ entier servant de clé primaire pour chaque ingrédient.
     name = db.Column(db.String(100), unique=True, nullable=False)
     # 'name': Champ de texte pour stocker le nom de l'ingrédient. Il doit être unique et non nullable.
-    recettes = db.relationship('Recette', secondary='recette_ingredient', back_populates='ingredients')
+    used_in_recettes = db.relationship('RecetteIngredient', back_populates='ingredient')
     # 'recettes': Relation many-to-many avec le modèle 'Recette'. Cela est défini par la table
     # de liaison 'recette_ingredient'.
     # 'back_populates' assure que la relation est bidirectionnelle, permettant la navigation depuis 'Recette'.
@@ -42,13 +66,17 @@ class Ingredient(db.Model):
 # Modèle de données pour une recette
 class Recette(db.Model):
     # Définit un modèle de données pour une recette dans la base de données.
+    __tablename__ = 'recette'
     id = db.Column(db.Integer, primary_key=True)
     # 'id': Champ entier servant de clé primaire pour chaque recette.
     name = db.Column(db.String(100), nullable=False)
     # 'name': Champ de texte pour stocker le nom de la recette. Il est non nullable.
     type = db.Column(db.String(20), nullable=False)
     # 'type': Champ de texte pour spécifier le type de recette (Entrée, Plat, Dessert). Il est non nullable.
-    ingredients = db.relationship('Ingredient', secondary='recette_ingredient', back_populates='recettes')
+    ingredients = db.relationship('RecetteIngredient', back_populates='recette',
+                                  foreign_keys=[RecetteIngredient.recette_id], cascade='all, delete-orphan')
+    steps = db.relationship('Step', back_populates='recette')
+    favorites = db.relationship('RecetteFavorite', back_populates='recette')
     # 'ingredients': Relation many-to-many avec le modèle 'Ingredient' à travers la table 'recette_ingredient'.
     # 'back_populates' assure que la relation est bidirectionnelle, permettant la navigation depuis 'Ingredient'.
 
@@ -60,39 +88,24 @@ class Menu(db.Model):
     # 'id': Champ entier servant de clé primaire pour chaque menu.
     name = db.Column(db.String(100), nullable=False)
     # 'name': Champ de texte pour stocker le nom du menu. Il est non nullable.
-    entry_id = db.Column(db.Integer, db.ForeignKey('recette.id'), nullable=False)
-    main_dish_id = db.Column(db.Integer, db.ForeignKey('recette.id'), nullable=False)
-    dessert_id = db.Column(db.Integer, db.ForeignKey('recette.id'), nullable=False)
+    entry = db.Column(db.String(100), db.ForeignKey('recette.name'))
+    main_dish = db.Column(db.String(100), db.ForeignKey('recette.name'))
+    dessert = db.Column(db.String(100), db.ForeignKey('recette.name'))
     # - 'entry_id', 'main_dish_id', 'dessert_id': Champs entiers représentant les clés étrangères vers les recettes
     # correspondantes (entrée, plat principal, dessert).
     # Remarque : Les clés étrangères sont liées aux clés primaires de la table 'Recette'.
 
 
-# Modèle de données pour la relation many-to-many entre Recette et Ingredient
-recette_ingredient = db.Table('recette_ingredient',
-                              # Définit une table de liaison many-to-many entre les tables 'Recette' et 'Ingredient'.
-                              db.Column('recette_id', db.Integer, db.ForeignKey('recette.id'), primary_key=True),
-                              # 'recette_id': Champ entier représentant la clé étrangère vers la table 'Recette'.
-                              db.Column('ingredient_id', db.Integer, db.ForeignKey('ingredient.id'), primary_key=True),
-                              # 'ingredient_id': Champ entier représentant la clé étrangère vers la table 'Ingredient'.
-                              db.Column('quantity', db.Float, nullable=False),
-                              db.relationship('Recette', back_populates='ingredients'),
-                              db.relationship('Ingredient', back_populates='recettes')
-                              )
-# 'quantity': Champ float représentant la quantité de l'ingrédient dans la recette.
-# 'primary_key=True': Indique que la combinaison des deux clés étrangères est la clé primaire de cette table de liaison.
-# Remarque : Cette table est utilisée pour représenter la relation many-to-many entre les recettes et les ingrédients.
-# Elle contient des informations supplémentaires comme la quantité d'un ingrédient dans une recette.
-
-
 # Modèle pour la table Step
 class Step(db.Model):
     # Modèle de données pour représenter les étapes d'une recette.
+    __tablename__ = 'step'
     id = db.Column(db.Integer, primary_key=True)
     # 'id': Champ entier servant de clé primaire pour la table des étapes.
     description = db.Column(db.Text, nullable=False)
     # 'description': Champ texte représentant la description d'une étape de recette.
-    recette_name = db.Column(db.String(100), db.ForeignKey('recette.name'), nullable=False)
+    recette_name = db.Column(db.String(100), db.ForeignKey('recette.name'))
+    recette = db.relationship('Recette', back_populates='steps')
     # 'recette_name': Champ de texte servant de clé étrangère vers le nom d'une recette.
 # Remarque : Le champ 'recette_name' est lié à la colonne 'name' dans la table 'Recette'.
 # Cela établit une relation entre les étapes et les recettes, où chaque étape est associée à une recette spécifique.
@@ -101,12 +114,13 @@ class Step(db.Model):
 # Modèle pour la table RecetteFavorite
 class RecetteFavorite(db.Model):
     # Modèle de données pour représenter les recettes favorites d'un utilisateur.
-    id = db.Column(db.Integer, primary_key=True)
-    # 'id': Champ entier servant de clé primaire pour la table des recettes favorites.
-    user_name = db.Column(db.String(80), db.ForeignKey('user.name'), nullable=False)
+    __tablename__ = 'recette_favorite'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     # 'user_name': Champ de texte servant de clé étrangère vers le nom d'un utilisateur.
-    recette_name = db.Column(db.String(100), db.ForeignKey('recette.name'), nullable=False)
+    recette_id = db.Column(db.Integer, db.ForeignKey('recette.id'), primary_key=True)
     # 'recette_name': Champ de texte servant de clé étrangère vers le nom d'une recette.
+    user = db.relationship('User', back_populates='favorites')
+    recette = db.relationship('Recette', back_populates='favorites')
 # Remarque : Les champs 'user_name' et 'recette_name' sont liés aux colonnes 'name' dans les tables 'User' et 'Recette'
 # respectivement.
 # Cela établit une relation où chaque entrée dans la table des recettes favorites est associée à un utilisateur et
@@ -263,7 +277,7 @@ def create_recette():
                     db.session.add(ingredient)
                     db.session.commit()
 
-                new_recette.ingredients.append({'ingredient': ingredient, 'quantity': quantity})
+                new_recette.ingredients.append(RecetteIngredient(ingredient=ingredient, quantity=quantity))
 
         # Ajoutez la recette à la base de données
         db.session.add(new_recette)
@@ -292,7 +306,7 @@ def create_recette_step(recette_name):
         # Récupère la description de l'étape depuis la requête POST
 
         if description:
-            new_step = Step(description=description, recette_name=recette_name)
+            new_step = Step(description=description, recette=recette)
             # Crée une nouvelle étape associée à la recette spécifiée
 
             db.session.add(new_step)
@@ -327,9 +341,9 @@ def get_recette_steps(recette_name):
 
 
 # Endpoint pour marquer/démarquer des recettes comme étant ses préférées
-@app.route('/users/<string:user_name>/recette_favorite/', methods=['POST', 'DELETE'])
-def manage_recette_favorite(user_name):
-    user = User.query.filter_by(name=user_name).first()
+@app.route('/users/<int:user_id>/recette_favorite/', methods=['POST', 'DELETE'])
+def manage_recette_favorite(user_id):
+    user = User.query.filter_by(id=user_id).first()
     # Recherche l'utilisateur dans la base de données avec le nom spécifié
     if not user:
         return jsonify({'message': 'Utilisateur inconnu'}), 404
@@ -348,25 +362,25 @@ def manage_recette_favorite(user_name):
 
     if request.method == 'POST':
         # Ajouter la recette à la liste des recettes préférées de l'utilisateur
-        recette_favorite = RecetteFavorite(user_name=user.name, recette_name=recette.name)
+        recette_favorite = RecetteFavorite(user_id=user.id, recette_id=recette.id)
         db.session.add(recette_favorite)
         db.session.commit()
         return jsonify({'message': 'Recette ajoutée aux favoris avec succès'}), 201
     elif request.method == 'DELETE':
         # Retirer la recette de la liste des recettes préférées de l'utilisateur
-        recette_favorite = RecetteFavorite.query.filter_by(user_name=user.name, recette_name=recette.name).first()
+        recette_favorite = RecetteFavorite.query.filter_by(user_id=user.id, recette_id=recette.id).first()
         if recette_favorite:
             db.session.delete(recette_favorite)
             db.session.commit()
-            return jsonify({'message': 'Recette supprimée des favoris avec succès'}), 200
+            return jsonify({'message': 'Recette supprimée des favoris avec succès'}), 201
         else:
             return jsonify({'message': 'Recette inexistante dans les favoris'}), 404
 
 
 # Endpoint pour dresser la liste de ses recettes préférées
-@app.route('/users/<string:user_name>/recette_favorite/', methods=['GET'])
-def get_recette_favorite(user_name):
-    user = User.query.filter_by(name=user_name).first()
+@app.route('/users/<int:user_id>/recette_favorite/', methods=['GET'])
+def get_recette_favorite(user_id):
+    user = User.query.filter_by(id=user_id).first()
     # Recherche l'utilisateur dans la base de données avec le nom spécifié
     if not user:
         return jsonify({'message': 'Utilisateur inconnu'}), 404
@@ -374,8 +388,8 @@ def get_recette_favorite(user_name):
 
     recette_favorite = (
         db.session.query(Recette)
-        .join(RecetteFavorite, Recette.name == RecetteFavorite.recette_name)
-        .filter(RecetteFavorite.user_name == user.name)
+        .join(RecetteFavorite, Recette.id == RecetteFavorite.recette_id)
+        .filter(RecetteFavorite.user_id == user.id)
         .all())
     # Recherche les recettes favorites de l'utilisateur en utilisant une jointure
 
@@ -438,7 +452,8 @@ def create_menu():
 def get_menu():
     menus = Menu.query.all()
     # Récupère tous les menus de la base de données
-    menu_list = [{'id': menu.id, 'name': menu.name} for menu in menus]
+    menu_list = [{'id': menu.id, 'name': menu.name, 'entry': menu.entry, 'main_dish': menu.main_dish,
+                  'dessert': menu.dessert} for menu in menus]
     # Crée une liste de dictionnaires représentant chaque menu
     return jsonify(menu_list)
     # Retourne une réponse JSON contenant la liste des menus
